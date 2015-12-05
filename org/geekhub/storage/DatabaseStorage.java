@@ -1,7 +1,10 @@
 package org.geekhub.storage;
 
 import org.geekhub.objects.Entity;
-import java.sql.*;
+
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.List;
 import java.util.Map;
 
@@ -23,7 +26,7 @@ public class DatabaseStorage implements Storage {
     public <T extends Entity> T get(Class<T> clazz, Integer id) throws Exception {
         //this method is fully implemented, no need to do anything, it's just an example
         String sql = "SELECT * FROM " + clazz.getSimpleName() + " WHERE id = " + id;
-        try(Statement statement = connection.createStatement()) {
+        try (Statement statement = connection.createStatement()) {
             List<T> result = extractResult(clazz, statement.executeQuery(sql));
             return result.isEmpty() ? null : result.get(0);
         }

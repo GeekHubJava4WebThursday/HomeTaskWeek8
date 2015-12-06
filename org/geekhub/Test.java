@@ -6,11 +6,12 @@ import org.geekhub.storage.DatabaseStorage;
 import org.geekhub.storage.Storage;
 
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.util.List;
 
 public class Test {
     public static void main(String[] args) throws Exception {
-        Connection connection = createConnection("root", "root", "geekdb");
+        Connection connection = createConnection("root", "StrongPassword", "geekdb");
 
         Storage storage = new DatabaseStorage(connection);
         List<Cat> cats = storage.list(Cat.class);
@@ -20,7 +21,7 @@ public class Test {
         cats = storage.list(Cat.class);
         if (!cats.isEmpty()) throw new Exception("Cats should not be in database!");
 
-        for(int i = 1; i <= 20; i++) {
+        for (int i = 1; i <= 20; i++) {
             Cat cat = new Cat();
             cat.setName("cat" + i);
             cat.setAge(i);
@@ -56,7 +57,6 @@ public class Test {
     }
 
     private static Connection createConnection(String login, String password, String dbName) throws Exception {
-        //implement me: initiate connection
-        return null;
+        return DriverManager.getConnection("jdbc:mysql://localhost:3306/" + dbName, login, password);
     }
 }

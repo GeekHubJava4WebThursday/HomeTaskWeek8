@@ -1,6 +1,6 @@
 package org.geekhub.objects;
 
-public class Cat {
+public class Cat extends Entity {
     private String name;
     private int age;
 

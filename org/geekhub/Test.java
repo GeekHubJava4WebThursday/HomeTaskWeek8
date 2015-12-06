@@ -13,7 +13,6 @@ public class Test {
 
     public static void main(String[] args) throws Exception {
         try (Connection connection = createConnection("root", "1111", "geekdb")) {
-
             Storage storage = new DatabaseStorage(connection);
             List<Cat> cats = storage.list(Cat.class);
             for (Cat cat : cats) {

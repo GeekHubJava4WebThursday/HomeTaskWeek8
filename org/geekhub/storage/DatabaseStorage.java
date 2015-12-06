@@ -56,7 +56,6 @@ public class DatabaseStorage implements Storage {
     public <T extends Entity> void save(T entity) throws Exception {
         Map<String, Object> data = prepareEntity(entity);
 
-        String sql = null;
         StringBuilder query = new StringBuilder();
         if (entity.isNew()) {
             StringBuilder columnNames = new StringBuilder();

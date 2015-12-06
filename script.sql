@@ -44,6 +44,20 @@ CREATE TABLE `user` (
   UNIQUE KEY `id` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8;
 
+#
+# Structure for the `film` table :
+#
+
+CREATE TABLE `film` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` tinytext,
+  `director` tinytext,
+  `actor` tinytext,
+  `oscars` tinyint,
+  `releaseDate` date,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `id` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=252 DEFAULT CHARSET=utf8;
 
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

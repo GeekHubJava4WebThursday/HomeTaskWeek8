@@ -1,12 +1,14 @@
 package org.geekhub;
 
 import org.geekhub.objects.Cat;
+import org.geekhub.objects.Film;
 import org.geekhub.objects.User;
 import org.geekhub.storage.DatabaseStorage;
 import org.geekhub.storage.Storage;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.util.Date;
 import java.util.List;
 
 public class Test {
@@ -53,6 +55,10 @@ public class Test {
 
             if (user3 != null) throw new Exception("User should be deleted!");
 
+            for (int i = 1; i <= 20; i++) {
+                storage.save(new Film("Terminator" + i, "director" + i, "Arnold Schwarzenegger", i, new Date()));
+            }
+            System.out.println(storage.list(Film.class));
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }

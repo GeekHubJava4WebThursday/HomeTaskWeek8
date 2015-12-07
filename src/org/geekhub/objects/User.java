@@ -7,6 +7,8 @@ public class User extends Entity {
     private Integer age;
     private Boolean admin;
     private Double balance;
+
+    @Ignore
     private Date creationDate;
 
     public User() {
@@ -51,5 +53,15 @@ public class User extends Entity {
 
     public void setCreationDate(Date creationDate) {
         this.creationDate = creationDate;
+    }
+
+    @Override
+    public String toString() {
+        return "User{" + "id = " + getId() + ", " +
+                "name = " + name + ", " +
+                "age = " + age + ", " +
+                "admin = " + admin + ", " +
+                "balance = " + balance +
+                "}";
     }
 }

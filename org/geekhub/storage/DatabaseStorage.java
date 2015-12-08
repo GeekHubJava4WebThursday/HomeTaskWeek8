@@ -56,39 +56,15 @@ public class DatabaseStorage implements Storage {
     public <T extends Entity> void save(T entity) throws Exception {
         Map<String, Object> data = prepareEntity(entity);
 
-        StringBuilder query = new StringBuilder();
+        String query;
         if (entity.isNew()) {
-            StringBuilder columnNames = new StringBuilder();
-            StringBuilder values = new StringBuilder();
-
-            for (Map.Entry<String, Object> entry : data.entrySet()) {
-                columnNames.append(entry.getKey()).append(", ");
-                values.append("'").append(entry.getValue()).append("', ");
-            }
-
-            // we need to remove last comma and space
-            columnNames.delete(columnNames.length() - 2, columnNames.length());
-            values.delete(values.length() - 2, values.length());
-
-            query.append("INSERT INTO ").append(entity.getClass().getSimpleName())
-                    .append(" (").append(columnNames.toString()).append(") ")
-                    .append("VALUES (").append(values.toString()).append(")");
-
+            query = generateInsertQuery(entity, data);
         } else {
-            query.append("UPDATE ").append(entity.getClass().getSimpleName()).append(" SET ");
-
-            for (Map.Entry<String, Object> entry : data.entrySet()) {
-                query.append(entry.getKey()).append(" = '").append(entry.getValue().toString()).append("', ");
-            }
-
-            // we need to remove last comma and space
-            query.delete(query.length() - 2, query.length());
-
-            query.append(" WHERE id = ").append(entity.getId());
+            query = generateUpdateQuery(entity, data);
         }
 
         try (Statement statement = connection.createStatement()) {
-            statement.executeUpdate(query.toString(), Statement.RETURN_GENERATED_KEYS);
+            statement.executeUpdate(query, Statement.RETURN_GENERATED_KEYS);
 
             if (entity.isNew()) {
                 ResultSet resultSet = statement.getGeneratedKeys();
@@ -97,6 +73,40 @@ public class DatabaseStorage implements Storage {
                 }
             }
         }
+    }
+
+    private <T extends Entity> String generateInsertQuery(T entity, Map<String, Object> data) {
+        StringBuilder query = new StringBuilder();
+        StringBuilder columnNames = new StringBuilder();
+        StringBuilder values = new StringBuilder();
+
+        for (Map.Entry<String, Object> entry : data.entrySet()) {
+            columnNames.append(entry.getKey()).append(", ");
+            values.append("'").append(entry.getValue()).append("', ");
+        }
+
+        columnNames.delete(columnNames.lastIndexOf(","), columnNames.length());
+        values.delete(values.lastIndexOf(","), values.length());
+
+        query.append("INSERT INTO ").append(entity.getClass().getSimpleName())
+                .append(" (").append(columnNames.toString()).append(") ")
+                .append("VALUES (").append(values.toString()).append(")");
+
+        return query.toString();
+    }
+
+    private <T extends Entity> String generateUpdateQuery(T entity, Map<String, Object> data) {
+        StringBuilder query = new StringBuilder();
+        query.append("UPDATE ").append(entity.getClass().getSimpleName()).append(" SET ");
+
+        for (Map.Entry<String, Object> entry : data.entrySet()) {
+            query.append(entry.getKey()).append(" = '").append(entry.getValue().toString()).append("', ");
+        }
+
+        query.delete(query.lastIndexOf(","), query.length());
+        query.append(" WHERE id = ").append(entity.getId());
+
+        return query.toString();
     }
 
     //converts object to map, could be helpful in save method

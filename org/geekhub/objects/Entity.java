@@ -12,6 +12,7 @@ public abstract class Entity {
 
     /**
      * Determines is object new or not based on its id.
+     *
      * @return true if object not yet saved, false otherwise.
      */
     public boolean isNew() {

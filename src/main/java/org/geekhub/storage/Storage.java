@@ -8,6 +8,7 @@ import java.util.List;
  * Every implementation of Storage should allow save, update, delete and retrieve entities {@link org.geekhub.objects.Entity}.
  *
  */
+
 public interface Storage {
 
     /**

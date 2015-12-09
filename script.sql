@@ -22,7 +22,7 @@ USE `geekdb`;
 # Structure for the `cat` table : 
 #
 
-CREATE TABLE `cat` (
+CREATE TABLE `Cat` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` tinytext,
   `age` int(11) DEFAULT NULL,
@@ -34,7 +34,7 @@ CREATE TABLE `cat` (
 # Structure for the `user` table : 
 #
 
-CREATE TABLE `user` (
+CREATE TABLE `User` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` tinytext,
   `age` int(11) DEFAULT NULL,

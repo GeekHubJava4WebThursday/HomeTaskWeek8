@@ -57,6 +57,6 @@ public class Test {
     }
 
     private static Connection createConnection(String login, String password, String dbName) throws Exception {
-        return DriverManager.getConnection(login, password, dbName);
+        return DriverManager.getConnection("jdbc:mysql://localhost/" + dbName, login, password);
     }
 }

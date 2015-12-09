@@ -5,10 +5,7 @@ import org.geekhub.objects.Ignore;
 
 import java.lang.reflect.Field;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Implementation of {@link org.geekhub.storage.Storage} that uses database as a storage for objects.
@@ -18,17 +15,10 @@ import java.util.Map;
  * Could be created only with {@link java.sql.Connection} specified.
  */
 public class DatabaseStorage implements Storage {
-    private static String DELETE_BY_ID_SQL_QUERY_TEMPLATE = "DELETE FROM ? WHERE id = ?";
-
-    private PreparedStatement deleteStatement;
-
     private Connection connection;
 
     public DatabaseStorage(Connection connection) {
         this.connection = connection;
-        try {
-            deleteStatement = connection.prepareStatement(DELETE_BY_ID_SQL_QUERY_TEMPLATE);
-        } catch (SQLException ignore) { }
     }
 
     @Override
@@ -51,45 +41,45 @@ public class DatabaseStorage implements Storage {
     @Override
     public <T extends Entity> boolean delete(T entity) throws Exception {
         Integer id = entity.getId();
-        deleteStatement.setString(1, entity.getClass().getSimpleName());
-        deleteStatement.setInt(2, id);
-        return deleteStatement.executeUpdate() == 1;
+        String tableName = entity.getClass().getSimpleName();
+        String sql = "DELETE FROM " + tableName + " WHERE id=" + id;
+        return (connection.createStatement().executeUpdate(sql) == 1);
     }
 
     @Override
     public <T extends Entity> void save(T entity) throws Exception {
-        Map<String, Object> data = prepareEntity(entity);
-
-        String sql = null;
+        Field[] fields = getAllDeclaredFields(entity.getClass());
+        String tableName = entity.getClass().getSimpleName();
+        String sql;
         if (entity.isNew()) {
-            //implement me
-            //need to define right SQL query to create object
-        } else {
-            //implement me
-            //need to define right SQL query to update object
-        }
-
-        //implement me, need to save/update object and update it with new id if it's a creation
-    }
-
-    private <T extends Entity> Map<String, Object> prepareEntity(T entity) throws Exception {
-        Map<String,Object> allFields = new HashMap<>();
-
-        Class entityClass = entity.getClass();
-        do {
-            Field[] fields = entityClass.getDeclaredFields();
+            List<String> columnsList = new ArrayList<>(fields.length);
+            List<String> valuesList = new ArrayList<>(fields.length);
             for (Field field : fields) {
-                field.setAccessible(true);
-                if (field.isAnnotationPresent(Ignore.class) || field.isSynthetic()) {
+                if (field.getName().equals("id")) {
                     continue;
                 }
-                String fieldName = field.getName();
-                Object fieldValue = field.get(entity);
-                allFields.put(fieldName, fieldValue);
+                columnsList.add(field.getName());
+                valuesList.add(convertToSqlType(field.get(entity)));
             }
-        } while ( ! (entityClass = entityClass.getSuperclass()).equals(Object.class) );
-System.out.println(allFields); // TODO delete debug code
-        return allFields;
+            String columns = String.join(",", columnsList);
+            String values = String.join(",", valuesList);
+            sql = "INSERT INTO " + tableName + " (" + columns + ") " + "VALUES" + " (" + values + ")";
+            Statement statement = connection.createStatement();
+            statement.executeUpdate(sql, Statement.RETURN_GENERATED_KEYS);
+            try (ResultSet result = statement.getGeneratedKeys()) {
+                if (result.next()) {
+                    entity.setId(result.getInt(1));
+                }
+            }
+        } else {
+            List<String> updatesList = new ArrayList<>(fields.length);
+            for (Field field : fields) {
+                updatesList.add(field.getName() + "=" + convertToSqlType(field.get(entity)));
+            }
+            String updates = String.join(",", updatesList);
+            sql = "UPDATE " + tableName + " SET " + updates + " WHERE id = " + entity.getId();
+            connection.createStatement().executeUpdate(sql);
+        }
     }
 
     //creates list of new instances of clazz by using data from resultset
@@ -102,25 +92,58 @@ System.out.println(allFields); // TODO delete debug code
             columns:
             for (int column = 1; column <= resultSetMetaData.getColumnCount(); column++) {
                 String fieldName = resultSetMetaData.getColumnName(column);
-                Class entityClass = clazz;
-                do {
-                    Field[] fields = entityClass.getDeclaredFields();
-                    for (Field field : fields) {
-                        if (fieldName.equals(field.getName())) {
-                            field.setAccessible(true); // TODO move up if access exception
-                            /* String className = resultSetMetaData.getColumnClassName(column);
-                            Class fieldClass = Class.forName(className);
-                            Object value = fieldClass.newInstance(); */
-                            Object value = resultSet.getObject(column);
-                            field.set(entity, value);
-                            continue columns;
-                        }
+                Field[] fields = getAllDeclaredFields(clazz);
+                for (Field field : fields) {
+                    if (fieldName.equals(field.getName())) {
+                        /* String className = resultSetMetaData.getColumnClassName(column);
+                        Class fieldClass = Class.forName(className);
+                        Object value = fieldClass.newInstance(); */
+                        Object value = resultSet.getObject(column);
+                        field.set(entity, value);
+                        continue columns;
                     }
-                } while ( ! (entityClass = entityClass.getSuperclass()).equals(Object.class));
+                }
                 throw new RuntimeException("Cannot map record to class' field");
             }
             result.add(entity);
         }
         return result;
     }
+
+    /**
+     * Gets all declared fields from class and its ancestors.
+     * Set access true to all returned fields
+     * Synthetic fields and fields with {@code @Ignore} annotation do not include
+     * @param clazz entity class
+     * @return array of all fields except fields with @Ignore annotation and synthetic fields
+     */
+    protected Field[] getAllDeclaredFields(Class clazz) {
+        List<Field> allFields = new ArrayList<>();
+
+        Class entityClass = clazz;
+        do {
+            Field[] fields = entityClass.getDeclaredFields();
+            for (Field field : fields) {
+                field.setAccessible(true);
+                if (field.isAnnotationPresent(Ignore.class) || field.isSynthetic()) {
+                    continue;
+                }
+                allFields.add(field);
+            }
+        } while ( ! (entityClass = entityClass.getSuperclass()).equals(Object.class) );
+
+        return allFields.toArray(new Field[allFields.size()]);
+    }
+
+    private String convertToSqlType(Object value) {
+        Class valueClass = value.getClass();
+        if (value instanceof Number) {
+            return value.toString();
+        } else if (valueClass.equals(Boolean.class)) {
+            return ((Boolean) value) ? "1" : "0";
+        } else { // as string
+            return "'" + value.toString() + "'";
+        }
+    }
+
 }

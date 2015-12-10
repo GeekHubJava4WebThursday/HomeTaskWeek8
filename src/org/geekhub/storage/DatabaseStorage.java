@@ -41,29 +41,60 @@ public class DatabaseStorage implements Storage {
 
     @Override
     public <T extends Entity> List<T> list(Class<T> clazz) throws Exception {
-        //implement me according to interface by using extractResult method
-        return null;
+        String sql = "SELECT * FROM " + clazz.getSimpleName();
+        List<T> result = new ArrayList<>();
+        try(Statement statement = connection.createStatement()) {
+            result = extractResult(clazz, statement.executeQuery(sql));
+        }
+        return result;
     }
 
     @Override
     public <T extends Entity> boolean delete(T entity) throws Exception {
-        //implement me
+        String sql = "delete from " + entity.getClass().getSimpleName() + " where id=" + entity.getId();
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            if(statement.executeUpdate() > 0){
+                return true;
+            }
+        }
         return false;
     }
 
     @Override
     public <T extends Entity> void save(T entity) throws Exception {
         Map<String, Object> data = prepareEntity(entity);
-
         String sql = null;
+        StringBuilder createSql = new StringBuilder();
         if (entity.isNew()) {
-            //implement me
-            //need to define right SQL query to create object
+            createSql.append("insert into " + entity.getClass().getSimpleName());
+            createSql.append(" (");
+            for(String colums : data.keySet()){
+                createSql.append(colums + ", ");
+            }
+            createSql.delete(createSql.length()-2, createSql.length());
+            createSql.append(") values (");
+            for(int i =0; i < data.size(); i++){
+                createSql.append("?, ");
+            }
+            createSql.delete(createSql.length()-2, createSql.length());
+            createSql.append(")");
         } else {
-            //implement me
-            //need to define right SQL query to update object
+            createSql.append("update " + entity.getClass().getSimpleName() + " set ");
+            for(String colums : data.keySet()){
+                    createSql.append(colums + "=?, ");
+            }
+            createSql.delete(createSql.length()-2, createSql.length());
+            createSql.append(" where id=" + data.get("id"));
         }
-
+        sql = createSql.toString();
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            int k = 1;
+            for (Object value : data.values()) {
+                preparedStatement.setObject(k, value);
+                k++;
+            }
+            preparedStatement.executeUpdate();
+        }
         //implement me, need to save/update object and update it with new id if it's a creation
     }
 
@@ -88,6 +119,12 @@ public class DatabaseStorage implements Storage {
         List<T> resultList = new ArrayList<>();
         while (resultset.next()) {
             T entity = clazz.newInstance();
+            Class<Entity> superclass = (Class<Entity>) entity.getClass().getSuperclass();
+            Field[] fields = superclass.getDeclaredFields();
+            for (Field f : fields){
+                f.setAccessible(true);
+                f.set(entity,resultset.getObject(f.getName()));
+            }
             for(Field field : clazz.getDeclaredFields()){
                 field.setAccessible(true);
                 if(!field.isAnnotationPresent(Ignore.class)){
@@ -99,24 +136,5 @@ public class DatabaseStorage implements Storage {
         return resultList;
     }
 
-    public static void main(String[] args) {
-        DatabaseStorage ds = new DatabaseStorage();
-        Cat c = new Cat();
-        c.setAge(12);
-        c.setName("Boris");
-        c.setId(1);
-        User u = new User();
-        u.setId(1);
-        u.setName("mask");
-        u.setAdmin(true);
-        u.setAge(12);
-        u.setBalance(21.2);
-        u.setCreationDate(new Date());
-        try {
-            ds.prepareEntity(u);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
 
 }

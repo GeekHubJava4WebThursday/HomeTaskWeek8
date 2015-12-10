@@ -6,6 +6,7 @@ import org.geekhub.storage.DatabaseStorage;
 import org.geekhub.storage.Storage;
 
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.util.List;
 
 public class Test {
@@ -56,7 +57,6 @@ public class Test {
     }
 
     private static Connection createConnection(String login, String password, String dbName) throws Exception {
-        //implement me: initiate connection
-        return null;
+        return DriverManager.getConnection("jdbc:mysql://localhost:3306/" + dbName, login, password);
     }
 }

@@ -7,6 +7,7 @@ public class User extends Entity {
     private Integer age;
     private Boolean admin;
     private Double balance;
+    @Ignore
     private Date creationDate;
 
     public User() {

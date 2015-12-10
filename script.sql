@@ -44,7 +44,15 @@ CREATE TABLE `user` (
   UNIQUE KEY `id` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8;
 
-
+# Dumping structure for table geekdb.person
+CREATE TABLE IF NOT EXISTS `person` (
+  `id` int(10) NOT NULL AUTO_INCREMENT,
+  `name` varchar(50) DEFAULT '0',
+  `surname` varchar(50) DEFAULT '0',
+  `patronymic` varchar(50) DEFAULT '0',
+  `birthday` date DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;

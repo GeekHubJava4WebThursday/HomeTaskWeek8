@@ -1,9 +1,17 @@
 package org.geekhub.storage;
 
 import org.geekhub.objects.Entity;
+import org.geekhub.objects.Ignore;
+import org.geekhub.objects.User;
+
+import java.lang.reflect.Field;
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.StringJoiner;
 
 /**
  * Implementation of {@link org.geekhub.storage.Storage} that uses database as a storage for objects.
@@ -31,14 +39,22 @@ public class DatabaseStorage implements Storage {
 
     @Override
     public <T extends Entity> List<T> list(Class<T> clazz) throws Exception {
-        //implement me according to interface by using extractResult method
-        return null;
+        String sql = "SELECT * FROM " + clazz.getSimpleName();
+        try (Statement statement = connection.createStatement()){
+            List<T> result = extractResult(clazz,statement.executeQuery(sql));
+            return result;
+        }
     }
 
     @Override
     public <T extends Entity> boolean delete(T entity) throws Exception {
-        //implement me
-        return false;
+        String sql = "DELETE FROM " + entity.getClass().getSimpleName() + " WHERE id=?";
+        int result = 0;
+        try (PreparedStatement statement = connection.prepareStatement(sql)){
+            statement.setInt(1,entity.getId());
+            result = statement.executeUpdate();
+            return result > 0 ? true : false;
+        }
     }
 
     @Override
@@ -46,26 +62,76 @@ public class DatabaseStorage implements Storage {
         Map<String, Object> data = prepareEntity(entity);
 
         String sql = null;
+        StringBuilder sqlBuild = new StringBuilder();
         if (entity.isNew()) {
-            //implement me
-            //need to define right SQL query to create object
+            StringJoiner fieldNames = new StringJoiner(",","(",")");
+            StringJoiner values = new StringJoiner(",","(",")");
+            sqlBuild.append("INSERT INTO " + entity.getClass().getSimpleName());
+            for (String fieldName : data.keySet()) {
+                fieldNames.add(fieldName);
+                values.add("?");
+            }
+
+            sqlBuild.append(fieldNames.toString());
+            sqlBuild.append(" VALUES "+values.toString());
+            sql = sqlBuild.toString();
+
         } else {
-            //implement me
-            //need to define right SQL query to update object
+            StringJoiner values = new StringJoiner(",");
+            sqlBuild.append("UPDATE "+ entity.getClass().getSimpleName() +" SET ");
+            for (String fieldName : data.keySet()) {
+                values.add(fieldName + "=?");
+            }
+            sqlBuild.append(values.toString());
+            sqlBuild.append(" WHERE id =" + entity.getId());
+            sql = sqlBuild.toString();
         }
 
-        //implement me, need to save/update object and update it with new id if it's a creation
+        try (PreparedStatement statement = connection.prepareStatement(sql)){
+            int i = 1;
+            for (String fieldName: data.keySet()){
+                statement.setObject(i++, data.get(fieldName));
+            }
+            statement.executeUpdate();
+        }
     }
 
     //converts object to map, could be helpful in save method
-    private <T extends Entity> Map<String, Object> prepareEntity(T entity) throws Exception {
-        //implement me
-        return null;
+    private static <T extends Entity> Map<String, Object> prepareEntity(T entity) throws Exception {
+        Field [] superClassFields = entity.getClass().getSuperclass().getDeclaredFields();
+        List<Field> fields = new ArrayList<>(Arrays.asList(superClassFields));
+        fields.addAll(Arrays.asList(entity.getClass().getDeclaredFields()));
+
+        Map<String,Object> entityMap = new HashMap<>();
+        for (Field field:fields) {
+            field.setAccessible(true);
+            if (!field.isAnnotationPresent(Ignore.class)) {
+                entityMap.put(field.getName(),field.get(entity));
+            }
+        }
+
+        return entityMap;
     }
 
     //creates list of new instances of clazz by using data from resultset
     private <T extends Entity> List<T> extractResult(Class<T> clazz, ResultSet resultset) throws Exception {
-        //implement me
-        return null;
+        Field [] superClassFields = clazz.getSuperclass().getDeclaredFields();
+        List<Field> fields = new ArrayList<>(Arrays.asList(superClassFields));
+        fields.addAll(Arrays.asList(clazz.getDeclaredFields()));
+        List<T> result = new ArrayList<>();
+        while (resultset.next()) {
+
+            T entity = clazz.newInstance();
+            for(Field field: fields) {
+
+                if (!field.isAnnotationPresent(Ignore.class)) {
+                    field.setAccessible(true);
+                    field.set(entity, resultset.getObject(field.getName()));
+                }
+            }
+            result.add(entity);
+        }
+        return result;
     }
+
 }

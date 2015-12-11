@@ -1,19 +1,24 @@
 package org.geekhub;
 
 import org.geekhub.objects.Cat;
+import org.geekhub.objects.Product;
 import org.geekhub.objects.User;
 import org.geekhub.storage.DatabaseStorage;
 import org.geekhub.storage.Storage;
 
 import java.sql.Connection;
+import java.sql.DriverManager;
+import java.time.LocalDate;
 import java.util.List;
 
 public class Test {
     public static void main(String[] args) throws Exception {
-        Connection connection = createConnection("root", "root", "geekdb");
+        Connection connection = createConnection("root", "1107", "geekdb");
 
         Storage storage = new DatabaseStorage(connection);
         List<Cat> cats = storage.list(Cat.class);
+
+
         for (Cat cat : cats) {
             storage.delete(cat);
         }
@@ -52,11 +57,27 @@ public class Test {
 
         if (user3 != null) throw new Exception("User should be deleted!");
 
+        Product product = new Product();
+        product.setType("Book");
+        product.setName("Thinking in JAVA");
+        product.setAmount(5);
+        product.setDelivered(LocalDate.now());
+        product.setPrice(Integer.MAX_VALUE);
+
+
+        storage.save(product);
+        Product product1 =storage.get(Product.class,product.getId());
+        if(!product.getName().equals(product1.getName())) throw  new Exception("Product name should be equals!");
+
+
+
         connection.close();
+        System.out.println("Test completed congratulation! !");
     }
 
     private static Connection createConnection(String login, String password, String dbName) throws Exception {
-        //implement me: initiate connection
-        return null;
+
+        return DriverManager.getConnection("jdbc:mysql://localhost:3306/" + dbName, login, password);
+
     }
 }

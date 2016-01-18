@@ -33,7 +33,7 @@ public class Test {
         if (Cats.size() != 20) throw new Exception("Number of Cats in storage should be 20!");
 
         User user = new User();
-        user.setAdmin(1);
+        user.setAdmin(true);
         user.setAge(23);
         user.setName("Victor");
         user.setBalance(22.23);
@@ -42,7 +42,7 @@ public class Test {
         User user1 = storage.get(User.class, user.getId());
         if (!user1.getName().equals(user.getName())) throw new Exception("Users should be equals!");
 
-        user.setAdmin(0);
+        user.setAdmin(false);
         storage.save(user);
 
         User user2 = storage.get(User.class, user.getId());

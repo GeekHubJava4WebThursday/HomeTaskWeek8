@@ -48,7 +48,7 @@ public class DatabaseStorage implements Storage {
         try (Statement statement = connection.createStatement()) {
             String sql = "DELETE FROM " + entity.getClass().getSimpleName() + " WHERE id = " + entity.getId();
             int result = statement.executeUpdate(sql);
-            return result == 1;
+            return result != 0;
         }
     }
 
@@ -85,8 +85,14 @@ public class DatabaseStorage implements Storage {
         }
 
         //implement me, need to save/update object and update it with new id if it's a creation
-        try (Statement statement = connection.createStatement()) {
-            statement.executeUpdate(sql);
+        try (PreparedStatement pStatement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)){
+            pStatement.executeUpdate();
+            if (entity.isNew()) {
+                ResultSet resultSet = pStatement.getGeneratedKeys();
+                if (resultSet.next()) {
+                    entity.setId(resultSet.getInt(1));
+                }
+            }
         }
     }
 
@@ -99,8 +105,16 @@ public class DatabaseStorage implements Storage {
             f.setAccessible(true);
             if (!f.isAnnotationPresent(Ignore.class)) {
                 String name = f.getName();
-                Object data = f.get(entity);
-                prepare.put(name, data);
+                if (f.getType().equals(Boolean.class)) {
+                    Integer data = 1;
+                    if (f.get(entity).equals(false)) {
+                        data = 0;
+                    }
+                    prepare.put(name, data);
+                } else {
+                    Object data = f.get(entity);
+                    prepare.put(name, data);
+                }
             }
         }
         return prepare;
@@ -110,7 +124,16 @@ public class DatabaseStorage implements Storage {
     private <T extends Entity> List<T> extractResult(Class<T> clazz, ResultSet resultset) throws Exception {
         List<T> instances = new ArrayList<>();
         while (resultset.next()) {
-
+            T instance = clazz.newInstance();
+            instance.setId(resultset.getInt("id"));
+            for (Field f : clazz.getDeclaredFields()) {
+                f.setAccessible(true);
+                if (!f.isAnnotationPresent(Ignore.class)) {
+                    String name = f.getName();
+                    f.set(instance, resultset.getObject(name));
+                }
+            }
+            instances.add(instance);
         }
         return instances;
     }

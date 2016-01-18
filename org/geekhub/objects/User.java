@@ -5,7 +5,7 @@ import java.util.Date;
 public class User extends Entity {
     private String name;
     private Integer age;
-    private Integer admin;
+    private Boolean admin;
     private Double balance;
 
     @Ignore
@@ -31,11 +31,11 @@ public class User extends Entity {
         this.age = age;
     }
 
-    public Integer getAdmin() {
+    public Boolean getAdmin() {
         return admin;
     }
 
-    public void setAdmin(Integer admin) {
+    public void setAdmin(Boolean admin) {
         this.admin = admin;
     }
 
